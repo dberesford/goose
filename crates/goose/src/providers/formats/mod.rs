@@ -1,6 +1,8 @@
 pub mod anthropic;
+#[cfg(feature = "providers-aws")]
 pub mod bedrock;
 pub mod databricks;
+#[cfg(feature = "providers-gcp-vertex")]
 pub mod gcpvertexai;
 pub mod google;
 pub mod ollama;

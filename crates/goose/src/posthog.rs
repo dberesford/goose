@@ -1,8 +1,12 @@
 //! PostHog telemetry - fires once per session creation.
 
+#[cfg(feature = "analytics")]
+use crate::config::get_enabled_extensions;
 use crate::config::paths::Paths;
-use crate::config::{get_enabled_extensions, Config};
+use crate::config::Config;
+#[cfg(feature = "analytics")]
 use crate::session::session_manager::CURRENT_SCHEMA_VERSION;
+#[cfg(feature = "analytics")]
 use crate::session::SessionManager;
 #[cfg(target_os = "windows")]
 use crate::subprocess::SubprocessExt;
@@ -14,6 +18,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use uuid::Uuid;
 
+#[cfg(feature = "analytics")]
 const POSTHOG_API_KEY: &str = "phc_RyX5CaY01VtZJCQyhSR5KFh6qimUy81YwxsEpotAftT";
 
 /// Config key for telemetry opt-out preference
@@ -114,6 +119,7 @@ fn increment_session_count() -> InstallationData {
 // Platform Info
 // ============================================================================
 
+#[cfg(feature = "analytics")]
 fn get_platform_version() -> Option<String> {
     #[cfg(target_os = "macos")]
     {
@@ -155,6 +161,7 @@ fn get_platform_version() -> Option<String> {
     }
 }
 
+#[cfg(feature = "analytics")]
 fn detect_install_method() -> String {
     let exe_path = std::env::current_exe().ok();
 
@@ -179,6 +186,7 @@ fn detect_install_method() -> String {
     "binary".to_string()
 }
 
+#[cfg(feature = "analytics")]
 fn is_dev_mode() -> bool {
     cfg!(debug_assertions)
 }
@@ -197,6 +205,7 @@ pub fn set_session_context(interface: &str, is_resumed: bool) {
     SESSION_IS_RESUMED.store(is_resumed, Ordering::Relaxed);
 }
 
+#[cfg(feature = "analytics")]
 fn get_session_interface() -> String {
     SESSION_INTERFACE
         .lock()
@@ -205,6 +214,7 @@ fn get_session_interface() -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
+#[cfg(feature = "analytics")]
 fn get_session_is_resumed() -> bool {
     SESSION_IS_RESUMED.load(Ordering::Relaxed)
 }
@@ -220,9 +230,13 @@ pub fn emit_session_started() {
 
     let installation = increment_session_count();
 
+    #[cfg(feature = "analytics")]
     tokio::spawn(async move {
         let _ = send_session_event(&installation).await;
     });
+
+    #[cfg(not(feature = "analytics"))]
+    let _ = installation;
 }
 
 #[derive(Default, Clone)]
@@ -247,17 +261,25 @@ pub fn emit_error_with_context(error_type: &str, context: ErrorContext) {
         return;
     }
 
-    // Temporarily disabled - only session_started events are sent
+    #[cfg(feature = "analytics")]
+    {
+        // Temporarily disabled - only session_started events are sent
+        let _ = (&error_type, &context);
+        return;
+
+        #[allow(unreachable_code)]
+        {
+            let installation = load_or_create_installation();
+            let error_type = error_type.to_string();
+
+            tokio::spawn(async move {
+                let _ = send_error_event(&installation, &error_type, context).await;
+            });
+        }
+    }
+
+    #[cfg(not(feature = "analytics"))]
     let _ = (&error_type, &context);
-    return;
-
-    #[allow(unreachable_code)]
-    let installation = load_or_create_installation();
-    let error_type = error_type.to_string();
-
-    tokio::spawn(async move {
-        let _ = send_error_event(&installation, &error_type, context).await;
-    });
 }
 
 pub fn emit_custom_slash_command_used() {
@@ -265,17 +287,23 @@ pub fn emit_custom_slash_command_used() {
         return;
     }
 
-    // Temporarily disabled - only session_started events are sent
-    return;
+    #[cfg(feature = "analytics")]
+    {
+        // Temporarily disabled - only session_started events are sent
+        return;
 
-    #[allow(unreachable_code)]
-    let installation = load_or_create_installation();
+        #[allow(unreachable_code)]
+        {
+            let installation = load_or_create_installation();
 
-    tokio::spawn(async move {
-        let _ = send_custom_slash_command_event(&installation).await;
-    });
+            tokio::spawn(async move {
+                let _ = send_custom_slash_command_event(&installation).await;
+            });
+        }
+    }
 }
 
+#[cfg(feature = "analytics")]
 async fn send_error_event(
     installation: &InstallationData,
     error_type: &str,
@@ -320,6 +348,7 @@ async fn send_error_event(
     client.capture(event).await.map_err(|e| format!("{:?}", e))
 }
 
+#[cfg(feature = "analytics")]
 async fn send_custom_slash_command_event(installation: &InstallationData) -> Result<(), String> {
     let client = posthog_rs::client(POSTHOG_API_KEY).await;
     let mut event =
@@ -338,6 +367,7 @@ async fn send_custom_slash_command_event(installation: &InstallationData) -> Res
     client.capture(event).await.map_err(|e| format!("{:?}", e))
 }
 
+#[cfg(feature = "analytics")]
 async fn send_session_event(installation: &InstallationData) -> Result<(), String> {
     let client = posthog_rs::client(POSTHOG_API_KEY).await;
     let mut event = posthog_rs::Event::new("session_started", &installation.installation_id);
@@ -485,9 +515,12 @@ pub fn classify_error(error: &str) -> &'static str {
 // Privacy Sanitization
 // ============================================================================
 
+#[cfg(feature = "analytics")]
 use regex::Regex;
+#[cfg(feature = "analytics")]
 use std::sync::LazyLock;
 
+#[cfg(feature = "analytics")]
 static SENSITIVE_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     vec![
         // File paths with usernames (Unix)
@@ -511,6 +544,7 @@ static SENSITIVE_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     ]
 });
 
+#[cfg(feature = "analytics")]
 fn sanitize_string(s: &str) -> String {
     let mut result = s.to_string();
     for pattern in SENSITIVE_PATTERNS.iter() {
@@ -519,6 +553,7 @@ fn sanitize_string(s: &str) -> String {
     result
 }
 
+#[cfg(feature = "analytics")]
 fn sanitize_value(value: serde_json::Value) -> serde_json::Value {
     match value {
         serde_json::Value::String(s) => serde_json::Value::String(sanitize_string(&s)),
@@ -545,48 +580,57 @@ pub async fn emit_event(
         return Ok(());
     }
 
-    // Temporarily disabled - only session_started events are sent
-    let _ = (event_name, &mut properties);
-    return Ok(());
-
-    #[allow(unreachable_code)]
-    let installation = load_or_create_installation();
-    let client = posthog_rs::client(POSTHOG_API_KEY).await;
-    let mut event = posthog_rs::Event::new(event_name, &installation.installation_id);
-
-    event.insert_prop("os", std::env::consts::OS).ok();
-    event.insert_prop("arch", std::env::consts::ARCH).ok();
-    event.insert_prop("version", env!("CARGO_PKG_VERSION")).ok();
-    event.insert_prop("interface", "desktop").ok();
-    event.insert_prop("source", "ui").ok();
-
-    if let Some(platform_version) = get_platform_version() {
-        event.insert_prop("platform_version", platform_version).ok();
+    #[cfg(not(feature = "analytics"))]
+    {
+        let _ = (event_name, &mut properties);
+        return Ok(());
     }
 
-    if event_name == "error_occurred" || event_name == "app_crashed" {
-        if let Some(serde_json::Value::String(error_type)) = properties.get("error_type") {
-            let classified = classify_error(error_type);
-            properties.insert(
-                "error_category".to_string(),
-                serde_json::Value::String(classified.to_string()),
-            );
+    #[cfg(feature = "analytics")]
+    {
+        // Temporarily disabled - only session_started events are sent
+        let _ = (event_name, &mut properties);
+        return Ok(());
+
+        #[allow(unreachable_code)]
+        let installation = load_or_create_installation();
+        let client = posthog_rs::client(POSTHOG_API_KEY).await;
+        let mut event = posthog_rs::Event::new(event_name, &installation.installation_id);
+
+        event.insert_prop("os", std::env::consts::OS).ok();
+        event.insert_prop("arch", std::env::consts::ARCH).ok();
+        event.insert_prop("version", env!("CARGO_PKG_VERSION")).ok();
+        event.insert_prop("interface", "desktop").ok();
+        event.insert_prop("source", "ui").ok();
+
+        if let Some(platform_version) = get_platform_version() {
+            event.insert_prop("platform_version", platform_version).ok();
         }
-    }
 
-    for (key, value) in properties {
-        let key_lower = key.to_lowercase();
-        if key_lower.contains("key")
-            || key_lower.contains("token")
-            || key_lower.contains("secret")
-            || key_lower.contains("password")
-            || key_lower.contains("credential")
-        {
-            continue;
+        if event_name == "error_occurred" || event_name == "app_crashed" {
+            if let Some(serde_json::Value::String(error_type)) = properties.get("error_type") {
+                let classified = classify_error(error_type);
+                properties.insert(
+                    "error_category".to_string(),
+                    serde_json::Value::String(classified.to_string()),
+                );
+            }
         }
-        let sanitized_value = sanitize_value(value);
-        event.insert_prop(&key, sanitized_value).ok();
-    }
 
-    client.capture(event).await.map_err(|e| format!("{:?}", e))
+        for (key, value) in properties {
+            let key_lower = key.to_lowercase();
+            if key_lower.contains("key")
+                || key_lower.contains("token")
+                || key_lower.contains("secret")
+                || key_lower.contains("password")
+                || key_lower.contains("credential")
+            {
+                continue;
+            }
+            let sanitized_value = sanitize_value(value);
+            event.insert_prop(&key, sanitized_value).ok();
+        }
+
+        client.capture(event).await.map_err(|e| format!("{:?}", e))
+    }
 }
