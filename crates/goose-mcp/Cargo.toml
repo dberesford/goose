@@ -34,10 +34,10 @@ include_dir = { workspace = true }
 regex = { workspace = true }
 once_cell = { workspace = true }
 ignore = { workspace = true }
-lopdf = "0.36.0"
-docx-rs = "0.4.7"
+lopdf = { version = "0.36.0", optional = true }
+docx-rs = { version = "0.4.7", optional = true }
 image = { version = "0.24.9", features = ["jpeg"] }
-umya-spreadsheet = "2.2.3"
+umya-spreadsheet = { version = "2.2.3", optional = true }
 which = {workspace = true}
 lru = { workspace = true }
 tree-sitter = "0.26"
@@ -61,3 +61,21 @@ tokio-util = { workspace = true }
 serial_test = { workspace = true }
 
 [features]
+default = ["builtin-all"]
+builtin-all = [
+    "builtin-developer",
+    "builtin-autovisualiser",
+    "builtin-computercontroller",
+    "builtin-memory",
+    "builtin-tutorial",
+]
+lite = ["builtin-developer"]
+builtin-developer = []
+builtin-autovisualiser = []
+builtin-computercontroller = [
+    "dep:lopdf",
+    "dep:docx-rs",
+    "dep:umya-spreadsheet",
+]
+builtin-memory = []
+builtin-tutorial = []

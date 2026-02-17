@@ -4197,7 +4197,6 @@ dependencies = [
  "etcetera 0.11.0",
  "fs2",
  "futures",
- "goose-mcp",
  "goose-test-support",
  "hf-hub",
  "ignore",
@@ -4350,6 +4349,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "goose-lite"
+version = "1.24.0"
+dependencies = [
+ "goose",
+ "goose-mcp-lite",
+ "tokio",
+]
+
+[[package]]
 name = "goose-mcp"
 version = "1.24.0"
 dependencies = [
@@ -4396,6 +4404,13 @@ dependencies = [
  "url",
  "which 8.0.0",
  "xcap",
+]
+
+[[package]]
+name = "goose-mcp-lite"
+version = "1.24.0"
+dependencies = [
+ "goose-mcp",
 ]
 
 [[package]]

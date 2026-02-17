@@ -1,31 +1,27 @@
 use std::sync::{Arc, RwLock};
 
+#[cfg(all(not(feature = "lite"), feature = "providers-gcp-vertex"))]
+use super::gcpvertexai::GcpVertexAIProvider;
 use super::{
     anthropic::AnthropicProvider,
-    azure::AzureProvider,
     base::{Provider, ProviderMetadata},
-    bedrock::BedrockProvider,
-    chatgpt_codex::ChatGptCodexProvider,
-    claude_code::ClaudeCodeProvider,
-    codex::CodexProvider,
-    cursor_agent::CursorAgentProvider,
-    databricks::DatabricksProvider,
-    gcpvertexai::GcpVertexAIProvider,
-    gemini_cli::GeminiCliProvider,
-    githubcopilot::GithubCopilotProvider,
-    google::GoogleProvider,
     lead_worker::LeadWorkerProvider,
     litellm::LiteLLMProvider,
     ollama::OllamaProvider,
     openai::OpenAiProvider,
     openrouter::OpenRouterProvider,
     provider_registry::ProviderRegistry,
-    sagemaker_tgi::SageMakerTgiProvider,
-    snowflake::SnowflakeProvider,
-    tetrate::TetrateProvider,
-    venice::VeniceProvider,
+};
+#[cfg(not(feature = "lite"))]
+use super::{
+    azure::AzureProvider, chatgpt_codex::ChatGptCodexProvider, claude_code::ClaudeCodeProvider,
+    codex::CodexProvider, cursor_agent::CursorAgentProvider, databricks::DatabricksProvider,
+    gemini_cli::GeminiCliProvider, githubcopilot::GithubCopilotProvider, google::GoogleProvider,
+    snowflake::SnowflakeProvider, tetrate::TetrateProvider, venice::VeniceProvider,
     xai::XaiProvider,
 };
+#[cfg(all(not(feature = "lite"), feature = "providers-aws"))]
+use super::{bedrock::BedrockProvider, sagemaker_tgi::SageMakerTgiProvider};
 use crate::config::ExtensionConfig;
 use crate::model::ModelConfig;
 use crate::providers::base::ProviderType;
@@ -44,27 +40,7 @@ static REGISTRY: OnceCell<RwLock<ProviderRegistry>> = OnceCell::const_new();
 
 async fn init_registry() -> RwLock<ProviderRegistry> {
     let mut registry = ProviderRegistry::new().with_providers(|registry| {
-        registry.register::<AnthropicProvider>(true);
-        registry.register::<AzureProvider>(false);
-        registry.register::<BedrockProvider>(false);
-        registry.register::<ChatGptCodexProvider>(true);
-        registry.register::<ClaudeCodeProvider>(true);
-        registry.register::<CodexProvider>(true);
-        registry.register::<CursorAgentProvider>(false);
-        registry.register::<DatabricksProvider>(true);
-        registry.register::<GcpVertexAIProvider>(false);
-        registry.register::<GeminiCliProvider>(false);
-        registry.register::<GithubCopilotProvider>(false);
-        registry.register::<GoogleProvider>(true);
-        registry.register::<LiteLLMProvider>(false);
-        registry.register::<OllamaProvider>(true);
-        registry.register::<OpenAiProvider>(true);
-        registry.register::<OpenRouterProvider>(true);
-        registry.register::<SageMakerTgiProvider>(false);
-        registry.register::<SnowflakeProvider>(false);
-        registry.register::<TetrateProvider>(true);
-        registry.register::<VeniceProvider>(false);
-        registry.register::<XaiProvider>(false);
+        register_compiled_providers(registry);
     });
     if let Err(e) = load_custom_providers_into_registry(&mut registry) {
         tracing::warn!("Failed to load custom providers: {}", e);
@@ -74,6 +50,43 @@ async fn init_registry() -> RwLock<ProviderRegistry> {
 
 fn load_custom_providers_into_registry(registry: &mut ProviderRegistry) -> Result<()> {
     register_declarative_providers(registry)
+}
+
+#[cfg(feature = "lite")]
+fn register_compiled_providers(registry: &mut ProviderRegistry) {
+    registry.register::<AnthropicProvider>(true);
+    registry.register::<LiteLLMProvider>(false);
+    registry.register::<OllamaProvider>(true);
+    registry.register::<OpenAiProvider>(true);
+    registry.register::<OpenRouterProvider>(true);
+}
+
+#[cfg(not(feature = "lite"))]
+fn register_compiled_providers(registry: &mut ProviderRegistry) {
+    registry.register::<AnthropicProvider>(true);
+    registry.register::<AzureProvider>(false);
+    #[cfg(feature = "providers-aws")]
+    registry.register::<BedrockProvider>(false);
+    registry.register::<ChatGptCodexProvider>(true);
+    registry.register::<ClaudeCodeProvider>(true);
+    registry.register::<CodexProvider>(true);
+    registry.register::<CursorAgentProvider>(false);
+    registry.register::<DatabricksProvider>(true);
+    #[cfg(feature = "providers-gcp-vertex")]
+    registry.register::<GcpVertexAIProvider>(false);
+    registry.register::<GeminiCliProvider>(false);
+    registry.register::<GithubCopilotProvider>(false);
+    registry.register::<GoogleProvider>(true);
+    registry.register::<LiteLLMProvider>(false);
+    registry.register::<OllamaProvider>(true);
+    registry.register::<OpenAiProvider>(true);
+    registry.register::<OpenRouterProvider>(true);
+    #[cfg(feature = "providers-aws")]
+    registry.register::<SageMakerTgiProvider>(false);
+    registry.register::<SnowflakeProvider>(false);
+    registry.register::<TetrateProvider>(true);
+    registry.register::<VeniceProvider>(false);
+    registry.register::<XaiProvider>(false);
 }
 
 async fn get_registry() -> &'static RwLock<ProviderRegistry> {
@@ -106,7 +119,12 @@ async fn get_from_registry(name: &str) -> Result<ProviderEntry> {
     guard
         .entries
         .get(name)
-        .ok_or_else(|| anyhow::anyhow!("Unknown provider: {}", name))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Unknown provider: {} (may be disabled in this build profile)",
+                name
+            )
+        })
         .cloned()
 }
 
@@ -180,7 +198,12 @@ async fn create_lead_worker_from_env(
         guard
             .entries
             .get(&lead_provider_name)
-            .ok_or_else(|| anyhow::anyhow!("Unknown provider: {}", lead_provider_name))?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Unknown provider: {} (may be disabled in this build profile)",
+                    lead_provider_name
+                )
+            })?
             .constructor
             .clone()
     };
@@ -190,7 +213,12 @@ async fn create_lead_worker_from_env(
         guard
             .entries
             .get(default_provider_name)
-            .ok_or_else(|| anyhow::anyhow!("Unknown provider: {}", default_provider_name))?
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Unknown provider: {} (may be disabled in this build profile)",
+                    default_provider_name
+                )
+            })?
             .constructor
             .clone()
     };
@@ -360,6 +388,47 @@ mod tests {
             assert!(
                 meta.config_keys[0].secret,
                 "OPENAI_API_KEY should be secret"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_unknown_provider_mentions_build_profile() {
+        let err = match get_from_registry("not_a_real_provider").await {
+            Ok(_) => panic!("unknown provider should return an error"),
+            Err(err) => err,
+        };
+        assert!(err
+            .to_string()
+            .contains("may be disabled in this build profile"));
+    }
+
+    #[cfg(feature = "lite")]
+    #[tokio::test]
+    async fn test_lite_provider_allowlist_baseline() {
+        let provider_names: std::collections::HashSet<String> = providers()
+            .await
+            .into_iter()
+            .map(|(metadata, _)| metadata.name)
+            .collect();
+
+        for expected in ["anthropic", "litellm", "ollama", "openai", "openrouter"] {
+            assert!(
+                provider_names.contains(expected),
+                "expected lite provider '{expected}' to be registered"
+            );
+        }
+
+        for excluded in [
+            "google",
+            "databricks",
+            "chatgpt_codex",
+            "claude_code",
+            "codex",
+        ] {
+            assert!(
+                !provider_names.contains(excluded),
+                "provider '{excluded}' should not be registered in lite builds"
             );
         }
     }

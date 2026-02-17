@@ -412,35 +412,11 @@ pub trait Provider: Send + Sync {
         messages: &[Message],
         tools: &[Tool],
     ) -> Result<(Message, ProviderUsage), ProviderError> {
+        // Opinionated behavior: complete_fast should not silently switch models.
+        // Always use the provider's configured model and fail loudly on errors.
         let model_config = self.get_model_config();
-        let fast_config = model_config.use_fast_model();
-
-        match self
-            .complete_with_model(Some(session_id), &fast_config, system, messages, tools)
+        self.complete_with_model(Some(session_id), &model_config, system, messages, tools)
             .await
-        {
-            Ok(result) => Ok(result),
-            Err(e) => {
-                if fast_config.model_name != model_config.model_name {
-                    tracing::warn!(
-                        "Fast model {} failed with error: {}. Falling back to regular model {}",
-                        fast_config.model_name,
-                        e,
-                        model_config.model_name
-                    );
-                    self.complete_with_model(
-                        Some(session_id),
-                        &model_config,
-                        system,
-                        messages,
-                        tools,
-                    )
-                    .await
-                } else {
-                    Err(e)
-                }
-            }
-        }
     }
 
     /// Get the model config from the provider

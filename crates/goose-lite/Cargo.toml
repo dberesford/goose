@@ -1,0 +1,18 @@
+[package]
+name = "goose-lite"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Minimal Goose embedding surface for downstream integrations"
+
+[lints]
+workspace = true
+
+[dependencies]
+goose = { path = "../goose", default-features = false, features = ["lite"] }
+goose-mcp-lite = { path = "../goose-mcp-lite" }
+
+[dev-dependencies]
+tokio = { workspace = true }

@@ -4,6 +4,7 @@ pub mod builtin_extension;
 pub mod config;
 pub mod context_mgmt;
 pub mod conversation;
+#[cfg(feature = "dictation")]
 pub mod dictation;
 pub mod execution;
 pub mod goose_apps;
@@ -12,6 +13,7 @@ pub mod logging;
 pub mod mcp_utils;
 pub mod model;
 pub mod oauth;
+#[cfg(feature = "telemetry")]
 pub mod otel;
 pub mod permission;
 pub mod posthog;
@@ -29,5 +31,6 @@ pub mod subprocess;
 pub mod token_counter;
 pub mod tool_inspection;
 pub mod tool_monitor;
+#[cfg(feature = "telemetry")]
 pub mod tracing;
 pub mod utils;

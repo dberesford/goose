@@ -4,6 +4,7 @@ pub mod auto_detect;
 pub mod azure;
 pub mod azureauth;
 pub mod base;
+#[cfg(feature = "providers-aws")]
 pub mod bedrock;
 pub mod canonical;
 pub mod chatgpt_codex;
@@ -15,7 +16,9 @@ pub mod databricks;
 pub mod embedding;
 pub mod errors;
 pub mod formats;
+#[cfg(feature = "providers-gcp-vertex")]
 mod gcpauth;
+#[cfg(feature = "providers-gcp-vertex")]
 pub mod gcpvertexai;
 pub mod gemini_cli;
 pub mod githubcopilot;
@@ -31,6 +34,7 @@ pub mod openrouter;
 pub mod provider_registry;
 pub mod provider_test;
 mod retry;
+#[cfg(feature = "providers-aws")]
 pub mod sagemaker_tgi;
 pub mod snowflake;
 pub mod testprovider;

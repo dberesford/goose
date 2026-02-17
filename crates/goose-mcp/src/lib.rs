@@ -9,18 +9,28 @@ pub static APP_STRATEGY: Lazy<AppStrategyArgs> = Lazy::new(|| AppStrategyArgs {
     app_name: "goose".to_string(),
 });
 
+#[cfg(feature = "builtin-autovisualiser")]
 pub mod autovisualiser;
+#[cfg(feature = "builtin-computercontroller")]
 pub mod computercontroller;
+#[cfg(feature = "builtin-developer")]
 pub mod developer;
 pub mod mcp_server_runner;
+#[cfg(feature = "builtin-memory")]
 mod memory;
 pub mod subprocess;
+#[cfg(feature = "builtin-tutorial")]
 pub mod tutorial;
 
+#[cfg(feature = "builtin-autovisualiser")]
 pub use autovisualiser::AutoVisualiserRouter;
+#[cfg(feature = "builtin-computercontroller")]
 pub use computercontroller::ComputerControllerServer;
+#[cfg(feature = "builtin-developer")]
 pub use developer::rmcp_developer::DeveloperServer;
+#[cfg(feature = "builtin-memory")]
 pub use memory::MemoryServer;
+#[cfg(feature = "builtin-tutorial")]
 pub use tutorial::TutorialServer;
 
 /// Type definition for a function that spawns and serves a builtin extension server
@@ -53,11 +63,33 @@ macro_rules! builtin {
 }
 
 pub static BUILTIN_EXTENSIONS: Lazy<HashMap<&'static str, SpawnServerFn>> = Lazy::new(|| {
-    HashMap::from([
-        builtin!(developer, DeveloperServer),
-        builtin!(autovisualiser, AutoVisualiserRouter),
-        builtin!(computercontroller, ComputerControllerServer),
-        builtin!(memory, MemoryServer),
-        builtin!(tutorial, TutorialServer),
-    ])
+    let mut extensions = HashMap::new();
+
+    #[cfg(feature = "builtin-developer")]
+    {
+        let (name, spawn) = builtin!(developer, DeveloperServer);
+        extensions.insert(name, spawn);
+    }
+    #[cfg(feature = "builtin-autovisualiser")]
+    {
+        let (name, spawn) = builtin!(autovisualiser, AutoVisualiserRouter);
+        extensions.insert(name, spawn);
+    }
+    #[cfg(feature = "builtin-computercontroller")]
+    {
+        let (name, spawn) = builtin!(computercontroller, ComputerControllerServer);
+        extensions.insert(name, spawn);
+    }
+    #[cfg(feature = "builtin-memory")]
+    {
+        let (name, spawn) = builtin!(memory, MemoryServer);
+        extensions.insert(name, spawn);
+    }
+    #[cfg(feature = "builtin-tutorial")]
+    {
+        let (name, spawn) = builtin!(tutorial, TutorialServer);
+        extensions.insert(name, spawn);
+    }
+
+    extensions
 });

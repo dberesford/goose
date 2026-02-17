@@ -15,6 +15,9 @@ cargo build
 cargo build                   # debug
 cargo build --release         # release  
 just release-binary           # release + openapi
+cargo check -p goose --no-default-features --features lite          # goose lite profile
+cargo check -p goose-mcp --no-default-features --features lite      # goose-mcp lite profile
+cargo check -p goose-lite                                        # minimal downstream surface
 ```
 
 ### Test
@@ -22,6 +25,8 @@ just release-binary           # release + openapi
 cargo test                   # all tests
 cargo test -p goose          # specific crate
 cargo test --package goose --test mcp_integration_test
+cargo test -p goose-lite
+cargo test -p goose-mcp-lite
 just record-mcp-tests        # record MCP
 ```
 
@@ -42,14 +47,13 @@ cd ui/desktop && npm test    # test UI
 ```
 crates/
 ├── goose             # core logic
-├── goose-bench       # benchmarking
 ├── goose-cli         # CLI entry
 ├── goose-server      # backend (binary: goosed)
-├── goose-mcp         # MCP extensions
+├── goose-mcp         # MCP extensions (full profile)
+├── goose-mcp-lite    # lightweight MCP surface (developer builtin)
+├── goose-lite        # minimal downstream import target
 ├── goose-test        # test utilities
-├── mcp-client        # MCP client
-├── mcp-core          # MCP shared
-└── mcp-server        # MCP server
+└── goose-test-support # integration/mcp test fixtures
 
 temporal-service/     # Go scheduler
 ui/desktop/           # Electron app
@@ -73,6 +77,8 @@ Test: When adding features, update goose-self-test.yaml, rebuild, then run `goos
 Error: Use anyhow::Result
 Provider: Implement Provider trait see providers/base.rs
 MCP: Extensions in crates/goose-mcp/
+MCP: For lightweight embedding paths use crates/goose-mcp-lite/
+Lite: Keep full defaults unchanged; lite behavior must be behind explicit features
 Server: Changes need just generate-openapi
 
 ## Code Quality

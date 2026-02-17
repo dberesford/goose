@@ -6,6 +6,7 @@ use goose::conversation::message::{Message, MessageContent};
 use goose::providers::anthropic::ANTHROPIC_DEFAULT_MODEL;
 use goose::providers::azure::AZURE_DEFAULT_MODEL;
 use goose::providers::base::Provider;
+#[cfg(feature = "providers-aws")]
 use goose::providers::bedrock::BEDROCK_DEFAULT_MODEL;
 use goose::providers::claude_code::CLAUDE_CODE_DEFAULT_MODEL;
 use goose::providers::codex::CODEX_DEFAULT_MODEL;
@@ -15,6 +16,7 @@ use goose::providers::errors::ProviderError;
 use goose::providers::google::GOOGLE_DEFAULT_MODEL;
 use goose::providers::litellm::LITELLM_DEFAULT_MODEL;
 use goose::providers::openai::OPEN_AI_DEFAULT_MODEL;
+#[cfg(feature = "providers-aws")]
 use goose::providers::sagemaker_tgi::SAGEMAKER_TGI_DEFAULT_MODEL;
 use goose::providers::snowflake::SNOWFLAKE_DEFAULT_MODEL;
 use goose::providers::xai::XAI_DEFAULT_MODEL;
@@ -531,6 +533,7 @@ async fn test_azure_provider() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "providers-aws")]
 #[tokio::test]
 async fn test_bedrock_provider_long_term_credentials() -> Result<()> {
     test_provider(
@@ -544,6 +547,7 @@ async fn test_bedrock_provider_long_term_credentials() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "providers-aws")]
 #[tokio::test]
 async fn test_bedrock_provider_aws_profile_credentials() -> Result<()> {
     let env_mods =
@@ -560,6 +564,7 @@ async fn test_bedrock_provider_aws_profile_credentials() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "providers-aws")]
 #[tokio::test]
 async fn test_bedrock_provider_bearer_token() -> Result<()> {
     // Clear standard AWS credentials to ensure bearer token auth is used
@@ -659,6 +664,7 @@ async fn test_snowflake_provider() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "providers-aws")]
 #[tokio::test]
 async fn test_sagemaker_tgi_provider() -> Result<()> {
     test_provider(
