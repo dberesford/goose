@@ -4,11 +4,15 @@
 //! plus the developer-only builtin MCP map from `goose-mcp-lite`.
 
 pub mod agents {
-    pub use goose::agents::{Agent, AgentEvent, ExtensionConfig, SessionConfig};
+    pub use goose::agents::{
+        Agent, AgentEvent, ExtensionConfig, RetryConfig, SessionConfig, SuccessCheck,
+    };
 }
 
 pub mod config {
-    pub use goose::config::paths::Paths;
+    pub mod paths {
+        pub use goose::config::paths::Paths;
+    }
     pub use goose::config::{
         get_enabled_extensions, Config, DEFAULT_DISPLAY_NAME, DEFAULT_EXTENSION,
         DEFAULT_EXTENSION_DESCRIPTION, DEFAULT_EXTENSION_TIMEOUT,
@@ -32,7 +36,7 @@ pub mod providers {
 pub mod session {
     pub use goose::session::EnabledExtensionsState;
     pub mod session_manager {
-        pub use goose::session::session_manager::{SessionManager, SessionType};
+        pub use goose::session::session_manager::{Session, SessionManager, SessionType};
     }
 }
 
