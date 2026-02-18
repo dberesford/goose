@@ -10,9 +10,13 @@ description = "Minimal Goose embedding surface for downstream integrations"
 [lints]
 workspace = true
 
+[features]
+default = ["mcp-builtins"]
+mcp-builtins = ["dep:goose-mcp-lite"]
+
 [dependencies]
 goose = { path = "../goose", default-features = false, features = ["lite"] }
-goose-mcp-lite = { path = "../goose-mcp-lite" }
+goose-mcp-lite = { path = "../goose-mcp-lite", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

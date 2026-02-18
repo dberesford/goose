@@ -1,7 +1,6 @@
 use crate::config::paths::Paths;
 use crate::config::GooseMode;
 use fs2::FileExt;
-use keyring::Entry;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -14,6 +13,42 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
+#[cfg(not(feature = "keyring"))]
+mod keyring {
+    #[derive(Debug, Clone)]
+    pub enum Error {
+        Unavailable,
+    }
+
+    impl std::fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::Unavailable => write!(f, "keyring feature not enabled"),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {}
+
+    #[derive(Debug, Clone)]
+    pub struct Entry;
+
+    impl Entry {
+        pub fn new(_service: &str, _username: &str) -> Result<Self, Error> {
+            Err(Error::Unavailable)
+        }
+
+        pub fn get_password(&self) -> Result<String, Error> {
+            Err(Error::Unavailable)
+        }
+
+        pub fn set_password(&self, _password: &str) -> Result<(), Error> {
+            Err(Error::Unavailable)
+        }
+    }
+}
+
+#[cfg(feature = "keyring")]
 const KEYRING_SERVICE: &str = "goose";
 const KEYRING_USERNAME: &str = "secrets";
 pub const CONFIG_YAML_NAME: &str = "config.yaml";
@@ -132,6 +167,7 @@ impl Default for Config {
             }
         });
 
+        #[cfg(feature = "keyring")]
         let secrets = match env::var("GOOSE_DISABLE_KEYRING") {
             Ok(_) => SecretStorage::File {
                 path: config_dir.join("secrets.yaml"),
@@ -140,6 +176,12 @@ impl Default for Config {
                 service: KEYRING_SERVICE.to_string(),
             },
         };
+
+        #[cfg(not(feature = "keyring"))]
+        let secrets = SecretStorage::File {
+            path: config_dir.join("secrets.yaml"),
+        };
+
         Config {
             config_path,
             defaults_path,
@@ -965,7 +1007,7 @@ impl Config {
 
     /// Get a keyring entry for the specified service
     fn get_keyring_entry(service: &str) -> Result<keyring::Entry, keyring::Error> {
-        Entry::new(service, KEYRING_USERNAME)
+        keyring::Entry::new(service, KEYRING_USERNAME)
     }
 
     /// Handle keyring errors with automatic fallback to file storage

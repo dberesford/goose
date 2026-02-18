@@ -1,9 +1,11 @@
 use anyhow::anyhow;
+#[cfg(feature = "builtin-developer-vision")]
 use base64::Engine;
 use etcetera::AppStrategy;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use include_dir::{include_dir, Dir};
 use indoc::{formatdoc, indoc};
+#[cfg(feature = "builtin-developer-vision")]
 use once_cell::sync::Lazy;
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -47,10 +49,12 @@ use std::{
     env::join_paths,
     ffi::OsString,
     future::Future,
-    io::Cursor,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
+#[cfg(feature = "builtin-developer-vision")]
+use std::io::Cursor;
+#[cfg(feature = "builtin-developer-vision")]
 use xcap::{Monitor, Window};
 
 use tokio::{
@@ -62,7 +66,30 @@ use tokio_util::sync::CancellationToken;
 
 use crate::developer::{paths::get_shell_path_dirs, shell::ShellConfig};
 
+#[cfg(feature = "builtin-developer-analyze")]
 use super::analyze::{types::AnalyzeParams, CodeAnalyzer};
+#[cfg(not(feature = "builtin-developer-analyze"))]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AnalyzeParams {
+    pub path: String,
+    pub focus: Option<String>,
+    #[serde(default = "default_follow_depth")]
+    pub follow_depth: u32,
+    #[serde(default = "default_max_depth")]
+    pub max_depth: u32,
+    #[serde(default)]
+    pub ast_recursion_limit: Option<usize>,
+    #[serde(default)]
+    pub force: bool,
+}
+#[cfg(not(feature = "builtin-developer-analyze"))]
+fn default_follow_depth() -> u32 {
+    2
+}
+#[cfg(not(feature = "builtin-developer-analyze"))]
+fn default_max_depth() -> u32 {
+    3
+}
 use super::editor_models::{create_editor_model, EditorModel};
 use super::shell::{configure_shell_command, expand_path, is_absolute_path, kill_process_group};
 use super::text_editor::{
@@ -146,6 +173,7 @@ pub struct PromptArgumentTemplate {
 // Embeds the prompts directory to the build
 static PROMPTS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/src/developer/prompts");
 
+#[cfg(feature = "builtin-developer-vision")]
 static MACOS_SCREENSHOT_FILENAME_RE: Lazy<regex::Regex> = Lazy::new(|| {
     regex::Regex::new(
         r"^Screenshot \d{4}-\d{2}-\d{2} at \d{1,2}\.\d{2}\.\d{2} (AM|PM|am|pm)(?: \(\d+\))?\.png$",
@@ -231,6 +259,7 @@ pub struct DeveloperServer {
     ignore_patterns: Gitignore,
     editor_model: Option<EditorModel>,
     prompts: HashMap<String, Prompt>,
+    #[cfg(feature = "builtin-developer-analyze")]
     code_analyzer: CodeAnalyzer,
     #[cfg(test)]
     pub running_processes: Arc<RwLock<HashMap<String, CancellationToken>>>,
@@ -608,6 +637,7 @@ impl DeveloperServer {
             ignore_patterns,
             editor_model,
             prompts: load_prompt_files(),
+            #[cfg(feature = "builtin-developer-analyze")]
             code_analyzer: CodeAnalyzer::new(),
             running_processes: Arc::new(RwLock::new(HashMap::new())),
             extend_path_with_shell: false,
@@ -633,6 +663,16 @@ impl DeveloperServer {
         description = "List all available window titles that can be used with screen_capture. Returns a list of window titles that can be used with the window_title parameter of the screen_capture tool."
     )]
     pub async fn list_windows(&self) -> Result<CallToolResult, ErrorData> {
+        #[cfg(not(feature = "builtin-developer-vision"))]
+        {
+            return Err(ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                "list_windows is unavailable in goose-mcp lite builds".to_string(),
+                None,
+            ));
+        }
+        #[cfg(feature = "builtin-developer-vision")]
+        {
         let windows = Window::all().map_err(|_| {
             ErrorData::new(
                 ErrorCode::INTERNAL_ERROR,
@@ -652,6 +692,7 @@ impl DeveloperServer {
                 .with_audience(vec![Role::User])
                 .with_priority(0.0),
         ]))
+        }
     }
 
     /// Capture a screenshot of a specified display or window.
@@ -668,6 +709,17 @@ impl DeveloperServer {
         &self,
         params: Parameters<ScreenCaptureParams>,
     ) -> Result<CallToolResult, ErrorData> {
+        #[cfg(not(feature = "builtin-developer-vision"))]
+        {
+            let _ = params;
+            return Err(ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                "screen_capture is unavailable in goose-mcp lite builds".to_string(),
+                None,
+            ));
+        }
+        #[cfg(feature = "builtin-developer-vision")]
+        {
         let params = params.0;
 
         let image = if let Some(window_title) = &params.window_title {
@@ -743,6 +795,7 @@ impl DeveloperServer {
             Content::text("Screenshot captured").with_audience(vec![Role::Assistant]),
             Content::image(data, &mime_type).with_priority(0.0),
         ]))
+        }
     }
 
     /// Perform text editing operations on files.
@@ -1190,10 +1243,22 @@ impl DeveloperServer {
         &self,
         params: Parameters<AnalyzeParams>,
     ) -> Result<CallToolResult, ErrorData> {
+        #[cfg(not(feature = "builtin-developer-analyze"))]
+        {
+            let _ = params;
+            return Err(ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                "analyze is unavailable in goose-mcp lite builds".to_string(),
+                None,
+            ));
+        }
+        #[cfg(feature = "builtin-developer-analyze")]
+        {
         let params = params.0;
         let path = self.resolve_path(&params.path)?;
         self.code_analyzer
             .analyze(params, path, &self.ignore_patterns)
+        }
     }
 
     /// Process an image file from disk.
@@ -1212,6 +1277,17 @@ impl DeveloperServer {
         &self,
         params: Parameters<ImageProcessorParams>,
     ) -> Result<CallToolResult, ErrorData> {
+        #[cfg(not(feature = "builtin-developer-vision"))]
+        {
+            let _ = params;
+            return Err(ErrorData::new(
+                ErrorCode::INTERNAL_ERROR,
+                "image_processor is unavailable in goose-mcp lite builds".to_string(),
+                None,
+            ));
+        }
+        #[cfg(feature = "builtin-developer-vision")]
+        {
         let params = params.0;
         let path_str = &params.path;
 
@@ -1290,8 +1366,10 @@ impl DeveloperServer {
             .with_audience(vec![Role::Assistant]),
             Content::image(data, &mime_type).with_priority(0.0),
         ]))
+        }
     }
 
+    #[cfg(feature = "builtin-developer-vision")]
     fn prepare_image_for_llm(
         mut image: xcap::image::DynamicImage,
     ) -> Result<(Vec<u8>, String), ErrorData> {
@@ -1426,6 +1504,7 @@ impl DeveloperServer {
     }
 
     // Helper function to handle Mac screenshot filenames that contain U+202F (narrow no-break space)
+    #[cfg(feature = "builtin-developer-vision")]
     fn normalize_mac_screenshot_path(&self, path: &Path) -> PathBuf {
         // Only process if the path has a filename
         if let Some(filename) = path.file_name().and_then(|f| f.to_str()) {

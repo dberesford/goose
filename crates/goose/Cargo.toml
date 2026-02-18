@@ -14,6 +14,8 @@ default = [
     "dictation",
     "telemetry",
     "analytics",
+    "keyring",
+    "code-execution",
 ]
 cuda = ["candle-core/cuda", "candle-nn/cuda"]
 providers-aws = [
@@ -32,6 +34,7 @@ dictation = [
     "dep:hf-hub",
     "dep:symphonia",
     "dep:rubato",
+    "dep:reqwest-multipart",
 ]
 telemetry = [
     "dep:tracing-opentelemetry",
@@ -46,6 +49,8 @@ recipes = []
 scheduler = []
 mcp-full = []
 lite = []
+keyring = ["dep:keyring"]
+code-execution = ["dep:pctx_code_mode"]
 
 [lints]
 workspace = true
@@ -63,7 +68,8 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 futures = { workspace = true }
 dirs = { workspace = true }
-reqwest = { workspace = true, features = ["rustls", "json", "cookies", "gzip", "brotli", "deflate", "zstd", "charset", "http2", "stream", "blocking", "multipart", "system-proxy"], default-features = false }
+reqwest = { workspace = true, features = ["rustls", "json", "cookies", "gzip", "charset", "http2", "stream", "system-proxy"], default-features = false }
+reqwest-multipart = { package = "reqwest", version = "0.12", features = ["multipart"], default-features = false, optional = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -99,7 +105,7 @@ keyring = { version = "3.6.2", features = [
     "windows-native",
     "sync-secret-service",
     "vendored",
-] }
+], optional = true }
 serde_yaml = { workspace = true }
 once_cell = { workspace = true }
 etcetera = { workspace = true }
@@ -152,14 +158,13 @@ sys-info = "0.9"
 schemars = { workspace = true, features = [
     "derive",
 ] }
-insta = "1.43.2"
 paste = "1.0.0"
 posthog-rs = { version = "0.3.7", optional = true }
 shellexpand = { workspace = true }
 indexmap = "2.12.0"
 ignore = { workspace = true }
 which = { workspace = true }
-pctx_code_mode = "^0.2.3"
+pctx_code_mode = { version = "^0.2.3", optional = true }
 unbinder = "0.1.7"
 pulldown-cmark = "0.13.0"
 llama-cpp-2 = { git = "https://github.com/jh-block/llama-cpp-rs.git", branch = "goose-patches", features = ["sampler"] }
@@ -186,6 +191,7 @@ test-case = { workspace = true }
 env-lock = { workspace = true }
 rmcp = { workspace = true, features = ["transport-streamable-http-server"] }
 goose-test-support = { path = "../goose-test-support" }
+insta = "1.43.2"
 
 [[example]]
 name = "agent"

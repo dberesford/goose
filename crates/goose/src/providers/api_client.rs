@@ -378,6 +378,7 @@ impl<'a> ApiRequestBuilder<'a> {
         Ok(request.json(payload).send().await?)
     }
 
+    #[cfg(feature = "dictation")]
     pub async fn multipart_post(self, form: reqwest::multipart::Form) -> Result<Response> {
         let request = self.send_request(|url, client| client.post(url)).await?;
         Ok(request.multipart(form).send().await?)

@@ -1,3 +1,4 @@
+#[cfg(feature = "builtin-developer-analyze")]
 pub mod analyze;
 mod editor_models;
 mod lang;

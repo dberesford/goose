@@ -1,5 +1,6 @@
 pub mod apps;
 pub mod chatrecall;
+#[cfg(feature = "code-execution")]
 pub mod code_execution;
 pub mod ext_manager;
 pub mod summon;
@@ -88,13 +89,13 @@ pub static PLATFORM_EXTENSIONS: Lazy<HashMap<&'static str, PlatformExtensionDef>
             },
         );
 
+        #[cfg(feature = "code-execution")]
         map.insert(
             code_execution::EXTENSION_NAME,
             PlatformExtensionDef {
                 name: code_execution::EXTENSION_NAME,
                 display_name: "Code Mode",
-                description:
-                    "Goose will make extension calls through code execution, saving tokens",
+                description: "Goose will make extension calls through code execution, saving tokens",
                 default_enabled: false,
                 unprefixed_tools: true,
                 client_factory: |ctx| {

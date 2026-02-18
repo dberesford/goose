@@ -35,7 +35,7 @@ serde_json = { workspace = true }
 schemars = { workspace = true }
 shellexpand = { workspace = true }
 indoc = { workspace = true }
-xcap = "=0.4.0"
+xcap = { version = "=0.4.0", optional = true }
 reqwest = { workspace = true, features = ["json", "rustls", "system-proxy"], default-features = false }
 chrono = { workspace = true }
 etcetera = { workspace = true }
@@ -46,20 +46,20 @@ once_cell = { workspace = true }
 ignore = { workspace = true }
 lopdf = { version = "0.36.0", optional = true }
 docx-rs = { version = "0.4.7", optional = true }
-image = { version = "0.24.9", features = ["jpeg"] }
+image = { version = "0.24.9", features = ["jpeg"], optional = true }
 umya-spreadsheet = { version = "2.2.3", optional = true }
 which = {workspace = true}
 lru = { workspace = true }
-tree-sitter = "0.26"
-tree-sitter-python = "0.25"
-tree-sitter-rust = "0.24"
-tree-sitter-javascript = "0.25"
-tree-sitter-go = "0.25"
-tree-sitter-java = "0.23"
-tree-sitter-kotlin-ng = "1.1"
-tree-sitter-swift = "0.7"
-tree-sitter-ruby = "0.23"
-rayon = "1.10"
+tree-sitter = { version = "0.26", optional = true }
+tree-sitter-python = { version = "0.25", optional = true }
+tree-sitter-rust = { version = "0.24", optional = true }
+tree-sitter-javascript = { version = "0.25", optional = true }
+tree-sitter-go = { version = "0.25", optional = true }
+tree-sitter-java = { version = "0.23", optional = true }
+tree-sitter-kotlin-ng = { version = "1.1", optional = true }
+tree-sitter-swift = { version = "0.7", optional = true }
+tree-sitter-ruby = { version = "0.23", optional = true }
+rayon = { version = "1.10", optional = true }
 libc = "0.2"
 # TODO: Fork mpatch or replace with a custom implementation using `similar` crate
 # for fuzzy patch matching. Current crate has limited maintenance (single maintainer,
@@ -75,6 +75,8 @@ serial_test = { workspace = true }
 default = ["builtin-all"]
 builtin-all = [
     "builtin-developer",
+    "builtin-developer-analyze",
+    "builtin-developer-vision",
     "builtin-autovisualiser",
     "builtin-computercontroller",
     "builtin-memory",
@@ -82,11 +84,25 @@ builtin-all = [
 ]
 lite = ["builtin-developer"]
 builtin-developer = []
+builtin-developer-analyze = [
+    "dep:tree-sitter",
+    "dep:tree-sitter-python",
+    "dep:tree-sitter-rust",
+    "dep:tree-sitter-javascript",
+    "dep:tree-sitter-go",
+    "dep:tree-sitter-java",
+    "dep:tree-sitter-kotlin-ng",
+    "dep:tree-sitter-swift",
+    "dep:tree-sitter-ruby",
+    "dep:rayon",
+]
+builtin-developer-vision = ["dep:xcap", "dep:image"]
 builtin-autovisualiser = []
 builtin-computercontroller = [
     "dep:lopdf",
     "dep:docx-rs",
     "dep:umya-spreadsheet",
+    "dep:image",
 ]
 builtin-memory = []
 builtin-tutorial = []

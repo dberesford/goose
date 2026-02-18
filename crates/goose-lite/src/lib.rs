@@ -45,5 +45,6 @@ pub mod builtin_extension {
         get_builtin_extension, register_builtin_extension, register_builtin_extensions,
         SpawnServerFn,
     };
+    #[cfg(feature = "mcp-builtins")]
     pub use goose_mcp_lite::{DeveloperServer, BUILTIN_EXTENSIONS};
 }
