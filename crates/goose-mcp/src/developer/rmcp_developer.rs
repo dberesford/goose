@@ -44,6 +44,8 @@ fn extract_session_id_from_meta(meta: &Meta) -> Option<String> {
 }
 
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "builtin-developer-vision")]
+use std::io::Cursor;
 use std::{
     collections::HashMap,
     env::join_paths,
@@ -52,8 +54,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-#[cfg(feature = "builtin-developer-vision")]
-use std::io::Cursor;
 #[cfg(feature = "builtin-developer-vision")]
 use xcap::{Monitor, Window};
 
@@ -673,25 +673,25 @@ impl DeveloperServer {
         }
         #[cfg(feature = "builtin-developer-vision")]
         {
-        let windows = Window::all().map_err(|_| {
-            ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                "Failed to list windows".to_string(),
-                None,
-            )
-        })?;
+            let windows = Window::all().map_err(|_| {
+                ErrorData::new(
+                    ErrorCode::INTERNAL_ERROR,
+                    "Failed to list windows".to_string(),
+                    None,
+                )
+            })?;
 
-        let window_titles: Vec<String> =
-            windows.into_iter().filter_map(|w| w.title().ok()).collect();
+            let window_titles: Vec<String> =
+                windows.into_iter().filter_map(|w| w.title().ok()).collect();
 
-        let content_text = format!("Available windows:\n{}", window_titles.join("\n"));
+            let content_text = format!("Available windows:\n{}", window_titles.join("\n"));
 
-        Ok(CallToolResult::success(vec![
-            Content::text(content_text.clone()).with_audience(vec![Role::Assistant]),
-            Content::text(content_text)
-                .with_audience(vec![Role::User])
-                .with_priority(0.0),
-        ]))
+            Ok(CallToolResult::success(vec![
+                Content::text(content_text.clone()).with_audience(vec![Role::Assistant]),
+                Content::text(content_text)
+                    .with_audience(vec![Role::User])
+                    .with_priority(0.0),
+            ]))
         }
     }
 
@@ -720,81 +720,81 @@ impl DeveloperServer {
         }
         #[cfg(feature = "builtin-developer-vision")]
         {
-        let params = params.0;
+            let params = params.0;
 
-        let image = if let Some(window_title) = &params.window_title {
-            // Try to find and capture the specified window
-            let windows = Window::all().map_err(|_| {
-                ErrorData::new(
-                    ErrorCode::INTERNAL_ERROR,
-                    "Failed to list windows".to_string(),
-                    None,
-                )
-            })?;
-
-            let window = windows
-                .into_iter()
-                .find(|w| w.title().is_ok_and(|t| &t == window_title))
-                .ok_or_else(|| {
+            let image = if let Some(window_title) = &params.window_title {
+                // Try to find and capture the specified window
+                let windows = Window::all().map_err(|_| {
                     ErrorData::new(
                         ErrorCode::INTERNAL_ERROR,
-                        format!("No window found with title '{}'", window_title),
+                        "Failed to list windows".to_string(),
                         None,
                     )
                 })?;
 
-            window.capture_image().map_err(|e| {
-                ErrorData::new(
-                    ErrorCode::INTERNAL_ERROR,
-                    format!("Failed to capture window '{}': {}", window_title, e),
-                    None,
-                )
-            })?
-        } else {
-            // Default to display capture if no window title is specified
-            let display = params.display.unwrap_or(0) as usize;
+                let window = windows
+                    .into_iter()
+                    .find(|w| w.title().is_ok_and(|t| &t == window_title))
+                    .ok_or_else(|| {
+                        ErrorData::new(
+                            ErrorCode::INTERNAL_ERROR,
+                            format!("No window found with title '{}'", window_title),
+                            None,
+                        )
+                    })?;
 
-            let monitors = Monitor::all().map_err(|_| {
-                ErrorData::new(
-                    ErrorCode::INTERNAL_ERROR,
-                    "Failed to access monitors".to_string(),
-                    None,
-                )
-            })?;
+                window.capture_image().map_err(|e| {
+                    ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        format!("Failed to capture window '{}': {}", window_title, e),
+                        None,
+                    )
+                })?
+            } else {
+                // Default to display capture if no window title is specified
+                let display = params.display.unwrap_or(0) as usize;
 
-            let monitor = monitors.get(display).ok_or_else(|| {
-                ErrorData::new(
-                    ErrorCode::INTERNAL_ERROR,
-                    format!(
-                        "{} was not an available monitor, {} found.",
-                        display,
-                        monitors.len()
-                    ),
-                    None,
-                )
-            })?;
+                let monitors = Monitor::all().map_err(|_| {
+                    ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        "Failed to access monitors".to_string(),
+                        None,
+                    )
+                })?;
 
-            monitor.capture_image().map_err(|e| {
-                ErrorData::new(
-                    ErrorCode::INTERNAL_ERROR,
-                    format!("Failed to capture display {}: {}", display, e),
-                    None,
-                )
-            })?
-        };
+                let monitor = monitors.get(display).ok_or_else(|| {
+                    ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        format!(
+                            "{} was not an available monitor, {} found.",
+                            display,
+                            monitors.len()
+                        ),
+                        None,
+                    )
+                })?;
 
-        let dynamic_image = xcap::image::DynamicImage::ImageRgba8(image);
-        let (bytes, mime_type) = Self::prepare_image_for_llm(dynamic_image)?;
+                monitor.capture_image().map_err(|e| {
+                    ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        format!("Failed to capture display {}: {}", display, e),
+                        None,
+                    )
+                })?
+            };
 
-        // Convert to base64
-        let data = base64::prelude::BASE64_STANDARD.encode(bytes);
+            let dynamic_image = xcap::image::DynamicImage::ImageRgba8(image);
+            let (bytes, mime_type) = Self::prepare_image_for_llm(dynamic_image)?;
 
-        // Return two Content objects like the old implementation:
-        // one text for Assistant, one image with priority 0.0
-        Ok(CallToolResult::success(vec![
-            Content::text("Screenshot captured").with_audience(vec![Role::Assistant]),
-            Content::image(data, &mime_type).with_priority(0.0),
-        ]))
+            // Convert to base64
+            let data = base64::prelude::BASE64_STANDARD.encode(bytes);
+
+            // Return two Content objects like the old implementation:
+            // one text for Assistant, one image with priority 0.0
+            Ok(CallToolResult::success(vec![
+                Content::text("Screenshot captured").with_audience(vec![Role::Assistant]),
+                Content::image(data, &mime_type).with_priority(0.0),
+            ]))
         }
     }
 
@@ -1254,10 +1254,10 @@ impl DeveloperServer {
         }
         #[cfg(feature = "builtin-developer-analyze")]
         {
-        let params = params.0;
-        let path = self.resolve_path(&params.path)?;
-        self.code_analyzer
-            .analyze(params, path, &self.ignore_patterns)
+            let params = params.0;
+            let path = self.resolve_path(&params.path)?;
+            self.code_analyzer
+                .analyze(params, path, &self.ignore_patterns)
         }
     }
 
@@ -1288,84 +1288,84 @@ impl DeveloperServer {
         }
         #[cfg(feature = "builtin-developer-vision")]
         {
-        let params = params.0;
-        let path_str = &params.path;
+            let params = params.0;
+            let path_str = &params.path;
 
-        let path = {
-            let p = self.resolve_path(path_str)?;
-            if cfg!(target_os = "macos") {
-                self.normalize_mac_screenshot_path(&p)
-            } else {
-                p
+            let path = {
+                let p = self.resolve_path(path_str)?;
+                if cfg!(target_os = "macos") {
+                    self.normalize_mac_screenshot_path(&p)
+                } else {
+                    p
+                }
+            };
+
+            // Check if file is ignored before proceeding
+            if self.is_ignored(&path) {
+                return Err(ErrorData::new(
+                    ErrorCode::INTERNAL_ERROR,
+                    format!(
+                        "Access to '{}' is restricted by .gooseignore",
+                        path.display()
+                    ),
+                    None,
+                ));
             }
-        };
 
-        // Check if file is ignored before proceeding
-        if self.is_ignored(&path) {
-            return Err(ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                format!(
-                    "Access to '{}' is restricted by .gooseignore",
-                    path.display()
-                ),
-                None,
-            ));
-        }
+            // Check if file exists
+            if !path.exists() {
+                return Err(ErrorData::new(
+                    ErrorCode::INTERNAL_ERROR,
+                    format!("File '{}' does not exist", path.display()),
+                    None,
+                ));
+            }
 
-        // Check if file exists
-        if !path.exists() {
-            return Err(ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                format!("File '{}' does not exist", path.display()),
-                None,
-            ));
-        }
+            // Check file size (10MB limit for image files)
+            const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB in bytes
+            let file_size = std::fs::metadata(&path)
+                .map_err(|e| {
+                    ErrorData::new(
+                        ErrorCode::INTERNAL_ERROR,
+                        format!("Failed to get file metadata: {}", e),
+                        None,
+                    )
+                })?
+                .len();
 
-        // Check file size (10MB limit for image files)
-        const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB in bytes
-        let file_size = std::fs::metadata(&path)
-            .map_err(|e| {
+            if file_size > MAX_FILE_SIZE {
+                return Err(ErrorData::new(
+                    ErrorCode::INTERNAL_ERROR,
+                    format!(
+                        "File '{}' is too large ({:.2}MB). Maximum size is 10MB.",
+                        path.display(),
+                        file_size as f64 / (1024.0 * 1024.0)
+                    ),
+                    None,
+                ));
+            }
+
+            // Open and decode the image
+            let image = xcap::image::open(&path).map_err(|e| {
                 ErrorData::new(
                     ErrorCode::INTERNAL_ERROR,
-                    format!("Failed to get file metadata: {}", e),
+                    format!("Failed to open image file: {}", e),
                     None,
                 )
-            })?
-            .len();
+            })?;
 
-        if file_size > MAX_FILE_SIZE {
-            return Err(ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                format!(
-                    "File '{}' is too large ({:.2}MB). Maximum size is 10MB.",
-                    path.display(),
-                    file_size as f64 / (1024.0 * 1024.0)
-                ),
-                None,
-            ));
-        }
+            let (bytes, mime_type) = Self::prepare_image_for_llm(image)?;
 
-        // Open and decode the image
-        let image = xcap::image::open(&path).map_err(|e| {
-            ErrorData::new(
-                ErrorCode::INTERNAL_ERROR,
-                format!("Failed to open image file: {}", e),
-                None,
-            )
-        })?;
+            let data = base64::prelude::BASE64_STANDARD.encode(bytes);
 
-        let (bytes, mime_type) = Self::prepare_image_for_llm(image)?;
-
-        let data = base64::prelude::BASE64_STANDARD.encode(bytes);
-
-        Ok(CallToolResult::success(vec![
-            Content::text(format!(
-                "Successfully processed image from {}",
-                path.display()
-            ))
-            .with_audience(vec![Role::Assistant]),
-            Content::image(data, &mime_type).with_priority(0.0),
-        ]))
+            Ok(CallToolResult::success(vec![
+                Content::text(format!(
+                    "Successfully processed image from {}",
+                    path.display()
+                ))
+                .with_audience(vec![Role::Assistant]),
+                Content::image(data, &mime_type).with_priority(0.0),
+            ]))
         }
     }
 

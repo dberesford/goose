@@ -95,7 +95,8 @@ pub static PLATFORM_EXTENSIONS: Lazy<HashMap<&'static str, PlatformExtensionDef>
             PlatformExtensionDef {
                 name: code_execution::EXTENSION_NAME,
                 display_name: "Code Mode",
-                description: "Goose will make extension calls through code execution, saving tokens",
+                description:
+                    "Goose will make extension calls through code execution, saving tokens",
                 default_enabled: false,
                 unprefixed_tools: true,
                 client_factory: |ctx| {

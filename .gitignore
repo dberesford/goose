@@ -1,3 +1,5 @@
+goose
+mck-goose.sh
 __pycache__
 *.pyc
 *.jar
