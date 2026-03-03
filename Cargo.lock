@@ -3400,6 +3400,9 @@ name = "esaxx-rs"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d817e038c30374a4bcb22f94d0a8a0e216958d4c3dcde369b1439fec4bdda6e6"
+dependencies = [
+ "cc",
+]
 
 [[package]]
 name = "etcetera"
@@ -4264,6 +4267,7 @@ dependencies = [
  "etcetera 0.11.0",
  "fs2",
  "futures",
+ "goose-mcp",
  "goose-test-support",
  "hf-hub",
  "ignore",
@@ -4292,6 +4296,7 @@ dependencies = [
  "pulldown-cmark",
  "rand 0.8.5",
  "regex",
+ "reqwest 0.12.28",
  "reqwest 0.13.2",
  "rmcp 0.16.0",
  "rubato",
@@ -4433,7 +4438,7 @@ dependencies = [
 
 [[package]]
 name = "goose-lite"
-version = "1.24.0"
+version = "1.26.1"
 dependencies = [
  "goose",
  "goose-mcp-lite",
@@ -4492,7 +4497,7 @@ dependencies = [
 
 [[package]]
 name = "goose-mcp-lite"
-version = "1.24.0"
+version = "1.26.1"
 dependencies = [
  "goose-mcp",
 ]
@@ -8030,6 +8035,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -10572,6 +10578,7 @@ dependencies = [
  "derive_builder",
  "esaxx-rs",
  "getrandom 0.3.4",
+ "indicatif 0.17.11",
  "itertools 0.14.0",
  "log",
  "macro_rules_attribute",

@@ -7,12 +7,13 @@ use super::{
     base::{Provider, ProviderMetadata},
     lead_worker::LeadWorkerProvider,
     litellm::LiteLLMProvider,
-    local_inference::LocalInferenceProvider,
     ollama::OllamaProvider,
     openai::OpenAiProvider,
     openrouter::OpenRouterProvider,
     provider_registry::ProviderRegistry,
 };
+#[cfg(not(feature = "lite"))]
+use super::local_inference::LocalInferenceProvider;
 #[cfg(not(feature = "lite"))]
 use super::{
     azure::AzureProvider, chatgpt_codex::ChatGptCodexProvider, claude_code::ClaudeCodeProvider,
@@ -66,6 +67,7 @@ fn register_compiled_providers(registry: &mut ProviderRegistry) {
 fn register_compiled_providers(registry: &mut ProviderRegistry) {
     registry.register::<AnthropicProvider>(true);
     registry.register::<AzureProvider>(false);
+    registry.register::<LocalInferenceProvider>(false);
     #[cfg(feature = "providers-aws")]
     registry.register::<BedrockProvider>(false);
     registry.register::<ChatGptCodexProvider>(true);
