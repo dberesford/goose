@@ -668,7 +668,7 @@ impl SessionStorage {
     }
 
     async fn import_legacy_session(pool: &Pool<Sqlite>, session: &Session) -> Result<()> {
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let recipe_json = match &session.recipe {
             Some(recipe) => Some(serde_json::to_string(recipe)?),
@@ -727,7 +727,7 @@ impl SessionStorage {
     }
 
     async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let current_version = Self::get_schema_version(&mut tx).await?;
 
@@ -902,7 +902,7 @@ impl SessionStorage {
         session_type: SessionType,
     ) -> Result<Session> {
         let pool = self.pool().await?;
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let today = chrono::Utc::now().format("%Y%m%d").to_string();
         let session = sqlx::query_as(
@@ -1074,7 +1074,7 @@ impl SessionStorage {
         }
 
         let pool = self.pool().await?;
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
         q = q.bind(&builder.session_id);
         q.execute(&mut *tx).await?;
 
@@ -1122,7 +1122,7 @@ impl SessionStorage {
 
     async fn add_message(&self, session_id: &str, message: &Message) -> Result<()> {
         let pool = self.pool().await?;
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let metadata_json = serde_json::to_string(&message.metadata)?;
 
@@ -1160,7 +1160,7 @@ impl SessionStorage {
         session_id: &str,
         conversation: &Conversation,
     ) -> Result<()> {
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         sqlx::query("DELETE FROM messages WHERE session_id = ?")
             .bind(session_id)
@@ -1243,7 +1243,7 @@ impl SessionStorage {
 
     async fn delete_session(&self, session_id: &str) -> Result<()> {
         let pool = self.pool().await?;
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let exists =
             sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM sessions WHERE id = ?)")
@@ -1422,7 +1422,7 @@ impl SessionStorage {
         ) -> crate::conversation::message::MessageMetadata,
     {
         let pool = self.pool().await?;
-        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        let mut tx = pool.begin().await?;
 
         let current_metadata_json = sqlx::query_scalar::<_, String>(
             "SELECT metadata_json FROM messages WHERE message_id = ? AND session_id = ?",
