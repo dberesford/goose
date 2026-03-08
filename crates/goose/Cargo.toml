@@ -106,7 +106,7 @@ keyring = { version = "3.6.2", features = [
     "sync-secret-service",
     "vendored",
 ], optional = true }
-goose-mcp = { path = "../goose-mcp" }
+goose-mcp = { path = "../goose-mcp", default-features = false, features = ["lite"] }
 serde_yaml = { workspace = true }
 once_cell = { workspace = true }
 etcetera = { workspace = true }

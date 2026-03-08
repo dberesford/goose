@@ -2,6 +2,8 @@ use std::sync::{Arc, RwLock};
 
 #[cfg(all(not(feature = "lite"), feature = "providers-gcp-vertex"))]
 use super::gcpvertexai::GcpVertexAIProvider;
+#[cfg(not(feature = "lite"))]
+use super::local_inference::LocalInferenceProvider;
 use super::{
     anthropic::AnthropicProvider,
     base::{Provider, ProviderMetadata},
@@ -12,8 +14,6 @@ use super::{
     openrouter::OpenRouterProvider,
     provider_registry::ProviderRegistry,
 };
-#[cfg(not(feature = "lite"))]
-use super::local_inference::LocalInferenceProvider;
 #[cfg(not(feature = "lite"))]
 use super::{
     azure::AzureProvider, chatgpt_codex::ChatGptCodexProvider, claude_code::ClaudeCodeProvider,
