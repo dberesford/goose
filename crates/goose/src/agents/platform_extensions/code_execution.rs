@@ -233,19 +233,23 @@ impl CodeExecutionClient {
         let code = args.input.code.clone();
 
         // Deno runtime is not Send, so we need to run it in a blocking task
-        // with its own tokio runtime
+        // with its own tokio runtime. Shutdown the runtime explicitly before returning
+        // so we never drop it from this context (avoids "Cannot drop a runtime in a
+        // context where blocking is not allowed" when the host already runs block_on).
         let output = tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .map_err(|e| format!("Failed to create runtime: {e}"))?;
 
-            rt.block_on(async move {
+            let out = rt.block_on(async move {
                 code_mode
                     .execute(&code, Some(registry))
                     .await
                     .map_err(|e| format!("Execution error: {e}"))
-            })
+            });
+            rt.shutdown_background();
+            out
         })
         .await
         .map_err(|e| format!("Execution task failed: {e}"))??;
