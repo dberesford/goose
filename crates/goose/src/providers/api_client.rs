@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::fmt;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 pub struct ApiClient {
@@ -210,9 +211,11 @@ impl ApiClient {
     pub fn with_timeout(host: String, auth: AuthMethod, timeout: Duration) -> Result<Self> {
         let mut client_builder = Client::builder().timeout(timeout);
 
-        // Configure TLS if needed
         let tls_config = TlsConfig::from_config()?;
-        if let Some(ref config) = tls_config {
+        if std::env::var_os("AEOS_SANDBOX_ACTIVE").is_some() && tls_config.is_none() {
+            let cfg = Self::aeos_sandbox_rustls_client_config()?;
+            client_builder = client_builder.tls_backend_preconfigured(cfg);
+        } else if let Some(ref config) = tls_config {
             client_builder = Self::configure_tls(client_builder, config)?;
         }
 
@@ -234,8 +237,10 @@ impl ApiClient {
             .timeout(self.timeout)
             .default_headers(self.default_headers.clone());
 
-        // Configure TLS if needed
-        if let Some(ref tls_config) = self.tls_config {
+        if std::env::var_os("AEOS_SANDBOX_ACTIVE").is_some() && self.tls_config.is_none() {
+            let cfg = Self::aeos_sandbox_rustls_client_config()?;
+            client_builder = client_builder.tls_backend_preconfigured(cfg);
+        } else if let Some(ref tls_config) = self.tls_config {
             client_builder = Self::configure_tls(client_builder, tls_config)?;
         }
 
@@ -261,6 +266,26 @@ impl ApiClient {
             }
         }
         Ok(client_builder)
+    }
+
+    /// When running under AEOS macOS sandbox, `rustls-platform-verifier` uses Apple's SecTrust,
+    /// which may perform OCSP/CRL checks over direct outbound TCP — not routed through HTTPS_PROXY
+    /// and denied by Seatbelt. Use Mozilla webpki roots + rustls-only verification (no auxiliary
+    /// network during trust evaluation) when no custom GOOSE_* TLS paths are set.
+    fn aeos_sandbox_rustls_client_config() -> Result<rustls::ClientConfig> {
+        let provider = rustls::crypto::CryptoProvider::get_default()
+            .cloned()
+            .unwrap_or_else(|| Arc::new(rustls::crypto::aws_lc_rs::default_provider()));
+        let mut root_store = rustls::RootCertStore::empty();
+        root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        let mut config = rustls::ClientConfig::builder_with_provider(provider)
+            .with_safe_default_protocol_versions()
+            .map_err(|e| anyhow::anyhow!(e))?
+            .with_root_certificates(root_store)
+            .with_no_client_auth();
+        // Match reqwest defaults (HTTP/2 + HTTP/1.1 ALPN).
+        config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+        Ok(config)
     }
 
     pub fn with_headers(mut self, headers: HeaderMap) -> Result<Self> {
