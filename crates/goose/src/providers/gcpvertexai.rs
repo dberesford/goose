@@ -24,7 +24,9 @@ use crate::providers::formats::gcpvertexai::{
     DEFAULT_MODEL, KNOWN_MODELS,
 };
 use crate::providers::gcpauth::GcpAuth;
-use crate::providers::openai_compatible::map_http_error_to_provider_error;
+use crate::providers::openai_compatible::{
+    map_http_error_to_provider_error, merge_rate_limit_retry_hints, parse_retry_after_header,
+};
 use crate::providers::retry::RetryConfig;
 use crate::providers::utils::RequestLog;
 use crate::session_context::SESSION_ID_HEADER;
@@ -317,13 +319,22 @@ impl GcpVertexAIProvider {
                         }),
                     );
                 }
-                let msg = rate_limit_error_message(&response.text().await.unwrap_or_default());
+                let header_delay = parse_retry_after_header(response.headers());
+                let body = response.text().await.unwrap_or_default();
+                let json = serde_json::from_str::<Value>(&body).ok();
+                let msg = rate_limit_error_message(&body);
+                let retry_delay = merge_rate_limit_retry_hints(header_delay, json.as_ref());
                 tracing::warn!("429 (attempt {rate_limit_attempts}/{max_retries}): {msg}");
                 last_error = Some(ProviderError::RateLimitExceeded {
                     details: msg,
-                    retry_delay: None,
+                    retry_delay,
                 });
-                sleep(self.retry_config.delay_for_attempt(rate_limit_attempts)).await;
+                sleep(
+                    retry_delay.unwrap_or_else(|| {
+                        self.retry_config.delay_for_attempt(rate_limit_attempts)
+                    }),
+                )
+                .await;
             } else if status == *STATUS_API_OVERLOADED {
                 overloaded_attempts += 1;
                 if overloaded_attempts > max_retries {
@@ -349,9 +360,12 @@ impl GcpVertexAIProvider {
                     "Authentication failed with status: {status}"
                 )));
             } else {
+                let retry_hint = parse_retry_after_header(response.headers());
                 let response_text = response.text().await.unwrap_or_default();
                 let payload = serde_json::from_str::<Value>(&response_text).ok();
-                return Err(map_http_error_to_provider_error(status, payload));
+                return Err(map_http_error_to_provider_error(
+                    status, payload, retry_hint,
+                ));
             }
         }
     }

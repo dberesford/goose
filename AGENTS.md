@@ -76,6 +76,7 @@ Test: Prefer tests/ folder, e.g. crates/goose/tests/
 Test: When adding features, update goose-self-test.yaml, rebuild, then run `goose run --recipe goose-self-test.yaml` to validate
 Error: Use anyhow::Result
 Provider: Implement Provider trait see providers/base.rs
+Provider: Optional HTTP retry tuning via `GOOSE_PROVIDER_MAX_RETRIES`, `GOOSE_PROVIDER_INITIAL_RETRY_INTERVAL_MS`, `GOOSE_PROVIDER_BACKOFF_MULTIPLIER`, `GOOSE_PROVIDER_MAX_RETRY_INTERVAL_MS`; `GOOSE_PROVIDER_SKIP_BACKOFF=true` skips sleep between retries
 MCP: Extensions in crates/goose-mcp/
 MCP: For lightweight embedding paths use crates/goose-mcp-lite/
 Lite: Keep full defaults unchanged; lite behavior must be behind explicit features

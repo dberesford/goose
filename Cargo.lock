@@ -4270,6 +4270,7 @@ dependencies = [
  "goose-mcp",
  "goose-test-support",
  "hf-hub",
+ "httpdate",
  "ignore",
  "include_dir",
  "indexmap 2.13.0",

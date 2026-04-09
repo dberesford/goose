@@ -9,7 +9,7 @@ use super::base::{
     ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata, ProviderUsage, Usage,
 };
 use super::errors::ProviderError;
-use super::openai_compatible::map_http_error_to_provider_error;
+use super::openai_compatible::{map_http_error_to_provider_error, parse_retry_after_header};
 use super::retry::ProviderRetry;
 use crate::conversation::message::{Message, MessageContent};
 
@@ -129,6 +129,7 @@ impl VeniceProvider {
         tracing::debug!("Venice response status: {}", status);
 
         if !status.is_success() {
+            let retry_hint = parse_retry_after_header(response.headers());
             // Read response body for more details on error
             let error_body = response.text().await.unwrap_or_default();
 
@@ -180,7 +181,9 @@ impl VeniceProvider {
 
             // Use the common error mapping function
             let error_json = serde_json::from_str::<Value>(&error_body).ok();
-            return Err(map_http_error_to_provider_error(status, error_json));
+            return Err(map_http_error_to_provider_error(
+                status, error_json, retry_hint,
+            ));
         }
 
         let response_text = response.text().await?;

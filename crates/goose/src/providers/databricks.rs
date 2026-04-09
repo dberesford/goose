@@ -12,7 +12,8 @@ use super::errors::ProviderError;
 use super::formats::databricks::create_request;
 use super::oauth;
 use super::openai_compatible::{
-    handle_response_openai_compat, map_http_error_to_provider_error, stream_openai_compat,
+    handle_response_openai_compat, map_http_error_to_provider_error, parse_retry_after_header,
+    stream_openai_compat,
 };
 use super::retry::ProviderRetry;
 use super::utils::{ImageFormat, RequestLog};
@@ -304,11 +305,16 @@ impl Provider for DatabricksProvider {
                     .await?;
                 if !resp.status().is_success() {
                     let status = resp.status();
+                    let retry_hint = parse_retry_after_header(resp.headers());
                     let error_text = resp.text().await.unwrap_or_default();
 
                     // Parse as JSON if possible to pass to map_http_error_to_provider_error
                     let json_payload = serde_json::from_str::<Value>(&error_text).ok();
-                    return Err(map_http_error_to_provider_error(status, json_payload));
+                    return Err(map_http_error_to_provider_error(
+                        status,
+                        json_payload,
+                        retry_hint,
+                    ));
                 }
                 Ok(resp)
             })

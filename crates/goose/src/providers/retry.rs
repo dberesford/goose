@@ -10,6 +10,16 @@ pub const DEFAULT_INITIAL_RETRY_INTERVAL_MS: u64 = 1000;
 pub const DEFAULT_BACKOFF_MULTIPLIER: f64 = 2.0;
 pub const DEFAULT_MAX_RETRY_INTERVAL_MS: u64 = 30_000;
 
+/// Optional tuning for `ProviderRetry` (HTTP retries on rate limits, 5xx, etc.).
+///
+/// - `GOOSE_PROVIDER_MAX_RETRIES` — max retry attempts (default: [`DEFAULT_MAX_RETRIES`]).
+/// - `GOOSE_PROVIDER_INITIAL_RETRY_INTERVAL_MS` — first backoff (default: [`DEFAULT_INITIAL_RETRY_INTERVAL_MS`]).
+/// - `GOOSE_PROVIDER_BACKOFF_MULTIPLIER` — exponential factor (default: [`DEFAULT_BACKOFF_MULTIPLIER`]).
+/// - `GOOSE_PROVIDER_MAX_RETRY_INTERVAL_MS` — backoff cap in ms (default: [`DEFAULT_MAX_RETRY_INTERVAL_MS`]).
+///
+/// Invalid or empty values fall back to the defaults above. `GOOSE_PROVIDER_SKIP_BACKOFF` still
+/// disables sleeping between attempts when set to `true`.
+
 #[derive(Debug, Clone)]
 pub struct RetryConfig {
     /// Maximum number of retry attempts
@@ -24,16 +34,36 @@ pub struct RetryConfig {
 
 impl Default for RetryConfig {
     fn default() -> Self {
-        Self {
-            max_retries: DEFAULT_MAX_RETRIES,
-            initial_interval_ms: DEFAULT_INITIAL_RETRY_INTERVAL_MS,
-            backoff_multiplier: DEFAULT_BACKOFF_MULTIPLIER,
-            max_interval_ms: DEFAULT_MAX_RETRY_INTERVAL_MS,
-        }
+        Self::from_env_or_default()
     }
 }
 
+fn env_parse<T: std::str::FromStr>(name: &str, default: T) -> T {
+    std::env::var(name)
+        .ok()
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(default)
+}
+
 impl RetryConfig {
+    pub fn from_env_or_default() -> Self {
+        Self {
+            max_retries: env_parse("GOOSE_PROVIDER_MAX_RETRIES", DEFAULT_MAX_RETRIES),
+            initial_interval_ms: env_parse(
+                "GOOSE_PROVIDER_INITIAL_RETRY_INTERVAL_MS",
+                DEFAULT_INITIAL_RETRY_INTERVAL_MS,
+            ),
+            backoff_multiplier: env_parse(
+                "GOOSE_PROVIDER_BACKOFF_MULTIPLIER",
+                DEFAULT_BACKOFF_MULTIPLIER,
+            ),
+            max_interval_ms: env_parse(
+                "GOOSE_PROVIDER_MAX_RETRY_INTERVAL_MS",
+                DEFAULT_MAX_RETRY_INTERVAL_MS,
+            ),
+        }
+    }
+
     pub fn new(
         max_retries: usize,
         initial_interval_ms: u64,
