@@ -82,7 +82,7 @@ builtin-all = [
     "builtin-memory",
     "builtin-tutorial",
 ]
-lite = ["builtin-developer"]
+lite = ["builtin-developer", "builtin-developer-analyze"]
 builtin-developer = []
 builtin-developer-analyze = [
     "dep:tree-sitter",

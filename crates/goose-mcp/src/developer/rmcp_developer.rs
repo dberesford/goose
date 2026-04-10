@@ -1248,7 +1248,7 @@ impl DeveloperServer {
             let _ = params;
             return Err(ErrorData::new(
                 ErrorCode::INTERNAL_ERROR,
-                "analyze is unavailable in goose-mcp lite builds".to_string(),
+                "analyze requires the builtin-developer-analyze feature".to_string(),
                 None,
             ));
         }
