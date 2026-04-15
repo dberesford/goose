@@ -310,7 +310,7 @@ async fn send_error_event(
     context: ErrorContext,
 ) -> Result<(), String> {
     let client = posthog_rs::client(POSTHOG_API_KEY).await;
-    let mut event = posthog_rs::Event::new("error", &installation.installation_id);
+    let mut event = posthog_rs::Event::new("error", installation.installation_id.as_str());
 
     event.insert_prop("error_type", error_type).ok();
     event
@@ -351,8 +351,10 @@ async fn send_error_event(
 #[cfg(feature = "analytics")]
 async fn send_custom_slash_command_event(installation: &InstallationData) -> Result<(), String> {
     let client = posthog_rs::client(POSTHOG_API_KEY).await;
-    let mut event =
-        posthog_rs::Event::new("custom_slash_command_used", &installation.installation_id);
+    let mut event = posthog_rs::Event::new(
+        "custom_slash_command_used",
+        installation.installation_id.as_str(),
+    );
 
     event.insert_prop("source", "backend").ok();
     event.insert_prop("version", env!("CARGO_PKG_VERSION")).ok();
@@ -370,7 +372,8 @@ async fn send_custom_slash_command_event(installation: &InstallationData) -> Res
 #[cfg(feature = "analytics")]
 async fn send_session_event(installation: &InstallationData) -> Result<(), String> {
     let client = posthog_rs::client(POSTHOG_API_KEY).await;
-    let mut event = posthog_rs::Event::new("session_started", &installation.installation_id);
+    let mut event =
+        posthog_rs::Event::new("session_started", installation.installation_id.as_str());
 
     event.insert_prop("os", std::env::consts::OS).ok();
     event.insert_prop("arch", std::env::consts::ARCH).ok();
@@ -595,7 +598,7 @@ pub async fn emit_event(
         #[allow(unreachable_code)]
         let installation = load_or_create_installation();
         let client = posthog_rs::client(POSTHOG_API_KEY).await;
-        let mut event = posthog_rs::Event::new(event_name, &installation.installation_id);
+        let mut event = posthog_rs::Event::new(event_name, installation.installation_id.as_str());
 
         event.insert_prop("os", std::env::consts::OS).ok();
         event.insert_prop("arch", std::env::consts::ARCH).ok();
