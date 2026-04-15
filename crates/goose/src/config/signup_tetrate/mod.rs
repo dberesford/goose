@@ -5,7 +5,8 @@ mod tests;
 
 use anyhow::{anyhow, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::distr::Alphanumeric;
+use rand::Rng;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -42,8 +43,8 @@ struct TokenRequest {
 
 impl PkceAuthFlow {
     pub fn new() -> Result<Self> {
-        let code_verifier: String = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
+        let code_verifier: String = rand::rng()
+            .sample_iter(Alphanumeric)
             .take(128)
             .map(char::from)
             .collect();
